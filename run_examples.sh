@@ -15,12 +15,12 @@ echo ""
 
 # Copy examples to cluster if not already there
 echo -e "${YELLOW}[INFO]${NC} Copying example jobs to cluster..."
-docker exec slurmctld bash -c "mkdir -p /data/examples"
-docker cp examples/jobs/. slurmctld:/data/examples/
+podman exec slurmctld bash -c "mkdir -p /data/examples"
+podman cp examples/jobs/. slurmctld:/data/examples/
 
 echo ""
 echo -e "${BLUE}Example jobs available:${NC}"
-docker exec slurmctld bash -c "ls -1 /data/examples/*.sh" | sed 's|/data/examples/||'
+podman exec slurmctld bash -c "ls -1 /data/examples/*.sh" | sed 's|/data/examples/||'
 
 echo ""
 echo -e "${YELLOW}Select mode:${NC}"
@@ -34,11 +34,11 @@ case $choice in
         echo ""
         echo -e "${BLUE}Submitting all example jobs...${NC}"
 
-        docker exec slurmctld bash -c "ls -1 /data/examples/*.sh" | while read job_script; do
+        podman exec slurmctld bash -c "ls -1 /data/examples/*.sh" | while read job_script; do
             job_name=$(basename "$job_script")
             echo -e "${YELLOW}[SUBMIT]${NC} $job_name"
 
-            job_id=$(docker exec slurmctld bash -c "cd /data && sbatch examples/$job_name 2>&1" | sed -n 's/.*Submitted batch job \([0-9][0-9]*\).*/\1/p')
+            job_id=$(podman exec slurmctld bash -c "cd /data && sbatch examples/$job_name 2>&1" | sed -n 's/.*Submitted batch job \([0-9][0-9]*\).*/\1/p')
 
             if [ -n "$job_id" ]; then
                 echo -e "${GREEN}  ✓${NC} Job ID: $job_id"
@@ -55,7 +55,7 @@ case $choice in
         max_wait=60
         waited=0
         while [ $waited -lt $max_wait ]; do
-            running=$(docker exec slurmctld squeue -h 2>/dev/null | wc -l)
+            running=$(podman exec slurmctld squeue -h 2>/dev/null | wc -l)
             if [ "$running" -eq 0 ]; then
                 echo -e "${GREEN}All jobs completed!${NC}"
                 break
@@ -67,20 +67,20 @@ case $choice in
 
         echo ""
         echo -e "${BLUE}Job outputs:${NC}"
-        docker exec slurmctld bash -c "cd /data && ls -1 *.out 2>/dev/null | tail -10 | while read f; do echo '---' \$f '---'; head -20 \$f; echo ''; done"
+        podman exec slurmctld bash -c "cd /data && ls -1 *.out 2>/dev/null | tail -10 | while read f; do echo '---' \$f '---'; head -20 \$f; echo ''; done"
         ;;
 
     2)
         echo ""
-        docker exec slurmctld bash -c "ls -1 /data/examples/*.sh" | sed 's|/data/examples/||' | nl
+        podman exec slurmctld bash -c "ls -1 /data/examples/*.sh" | sed 's|/data/examples/||' | nl
         read -p "Enter number: " num
 
-        job_script=$(docker exec slurmctld bash -c "ls -1 /data/examples/*.sh" | sed -n "${num}p")
+        job_script=$(podman exec slurmctld bash -c "ls -1 /data/examples/*.sh" | sed -n "${num}p")
         job_name=$(basename "$job_script")
 
         echo ""
         echo -e "${YELLOW}[SUBMIT]${NC} $job_name"
-        job_id=$(docker exec slurmctld bash -c "cd /data && sbatch examples/$job_name 2>&1" | sed -n 's/.*Submitted batch job \([0-9][0-9]*\).*/\1/p')
+        job_id=$(podman exec slurmctld bash -c "cd /data && sbatch examples/$job_name 2>&1" | sed -n 's/.*Submitted batch job \([0-9][0-9]*\).*/\1/p')
 
         if [ -n "$job_id" ]; then
             echo -e "${GREEN}  ✓${NC} Job ID: $job_id submitted"
@@ -89,7 +89,7 @@ case $choice in
             echo -e "${BLUE}Waiting for job to complete...${NC}"
 
             for i in {1..30}; do
-                state=$(docker exec slurmctld squeue -j "$job_id" -h -o "%T" 2>/dev/null || echo "COMPLETED")
+                state=$(podman exec slurmctld squeue -j "$job_id" -h -o "%T" 2>/dev/null || echo "COMPLETED")
                 if [ "$state" = "COMPLETED" ] || [ -z "$state" ]; then
                     echo -e "${GREEN}Job completed!${NC}"
                     break
@@ -100,9 +100,9 @@ case $choice in
 
             echo ""
             echo -e "${BLUE}Job output:${NC}"
-            output_file=$(docker exec slurmctld bash -c "ls -t /data/*.out 2>/dev/null | head -1")
+            output_file=$(podman exec slurmctld bash -c "ls -t /data/*.out 2>/dev/null | head -1")
             if [ -n "$output_file" ]; then
-                docker exec slurmctld cat "$output_file"
+                podman exec slurmctld cat "$output_file"
             else
                 echo -e "${RED}No output file found${NC}"
             fi
@@ -114,7 +114,7 @@ case $choice in
     3)
         echo ""
         echo -e "${BLUE}Example jobs:${NC}"
-        docker exec slurmctld bash -c "cd /data/examples && for f in *.sh; do echo ''; echo -e '${BLUE}\$f${NC}:'; head -8 \$f | grep -E '^#SBATCH|^# ' | sed 's/^#SBATCH/  SBATCH/; s/^# /  /'; done"
+        podman exec slurmctld bash -c "cd /data/examples && for f in *.sh; do echo ''; echo -e '${BLUE}\$f${NC}:'; head -8 \$f | grep -E '^#SBATCH|^# ' | sed 's/^#SBATCH/  SBATCH/; s/^# /  /'; done"
         ;;
 
     *)
@@ -128,5 +128,5 @@ echo -e "${BLUE}================================${NC}"
 echo -e "${GREEN}Done!${NC}"
 echo ""
 echo -e "${YELLOW}Tip:${NC} Use 'make jobs' to view job queue"
-echo -e "${YELLOW}Tip:${NC} Use 'docker exec slurmctld squeue' to check job status"
-echo -e "${YELLOW}Tip:${NC} Use 'docker exec slurmctld ls /data/*.out' to see output files"
+echo -e "${YELLOW}Tip:${NC} Use 'podman exec slurmctld squeue' to check job status"
+echo -e "${YELLOW}Tip:${NC} Use 'podman exec slurmctld ls /data/*.out' to see output files"

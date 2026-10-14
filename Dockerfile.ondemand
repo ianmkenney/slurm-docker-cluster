@@ -9,12 +9,12 @@ ARG SLURM_VERSION
 ARG RUNTIME_BASE=rockylinux/rockylinux:9
 
 # Reference the main Slurm image to extract built RPMs and gosu
-FROM slurm-docker-cluster:${SLURM_VERSION} AS slurm-base
+FROM localhost/slurm-docker-cluster:${SLURM_VERSION} AS slurm-base
 
 # ============================================================================
 # Open OnDemand runtime
 # ============================================================================
-FROM ${RUNTIME_BASE}
+FROM docker.io/${RUNTIME_BASE}
 
 LABEL org.opencontainers.image.source="https://github.com/giovtorres/slurm-docker-cluster" \
       org.opencontainers.image.title="slurm-docker-cluster-ondemand" \

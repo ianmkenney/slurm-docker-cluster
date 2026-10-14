@@ -16,7 +16,7 @@ ARG RUNTIME_BASE=rockylinux/rockylinux:9
 # (pre-built binaries use an old Go version that triggers CVEs)
 # https://github.com/tianon/gosu/issues/136
 # ============================================================================
-FROM golang:1.26-bookworm AS gosu-builder
+FROM docker.io/golang:1.26-bookworm AS gosu-builder
 
 ARG GOSU_VERSION
 ARG TARGETOS
@@ -35,7 +35,7 @@ RUN set -ex \
 # ============================================================================
 # Stage 2: Build RPMs
 # ============================================================================
-FROM ${BUILDER_BASE} AS builder
+FROM docker.io/${BUILDER_BASE} AS builder
 
 ARG SLURM_VERSION
 ARG TARGETARCH
@@ -123,7 +123,7 @@ RUN set -ex \
 # Stage 3: Build Lmod from source
 # (hardcoded Rocky Linux 9 base — GPU CUDA images are not needed to build Lmod)
 # ============================================================================
-FROM rockylinux/rockylinux:9 AS lmod-builder
+FROM docker.io/rockylinux/rockylinux:9 AS lmod-builder
 
 ARG LMOD_VERSION
 
@@ -157,7 +157,7 @@ RUN set -ex \
 # Stage 4: Clone Spack from source
 # (hardcoded Rocky Linux 9 — no GPU overhead needed for this stage)
 # ============================================================================
-FROM rockylinux/rockylinux:9 AS spack-builder
+FROM docker.io/rockylinux/rockylinux:9 AS spack-builder
 
 ARG SPACK_VERSION
 
@@ -185,7 +185,7 @@ RUN set -ex \
 # ============================================================================
 # Stage 5: Runtime image
 # ============================================================================
-FROM ${RUNTIME_BASE}
+FROM docker.io/${RUNTIME_BASE}
 
 LABEL org.opencontainers.image.source="https://github.com/giovtorres/slurm-docker-cluster" \
       org.opencontainers.image.title="slurm-docker-cluster" \

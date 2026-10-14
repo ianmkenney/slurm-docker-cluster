@@ -92,22 +92,22 @@ help:  ## Show this help message
 	@echo "  Access:  http://localhost:8080 (login: ood@localhost / password)"
 
 build:  ## Build Docker images
-	docker compose --progress plain build
+	podman compose build
 
 build-no-cache:  ## Build Docker images without cache
-	docker compose --progress plain build --no-cache
+	podman compose build --no-cache
 
 up:  ## Start containers (auto-enables monitoring if ELASTICSEARCH_HOST is set in .env)
-	docker compose $(PROFILE_FLAG) up -d
+	podman compose $(PROFILE_FLAG) up -d
 
 down:  ## Stop containers
-	docker compose $(PROFILE_FLAG) down
+	podman compose $(PROFILE_FLAG) down
 
 clean:  ## Remove containers and volumes
-	docker compose $(PROFILE_FLAG) down -v
+	podman compose $(PROFILE_FLAG) down -v
 
 logs:  ## Show container logs
-	docker compose logs -f
+	podman compose logs -f
 
 test:  ## Run test suite
 	./test_cluster.sh
@@ -123,28 +123,28 @@ test-ondemand:  ## Run Open OnDemand profile test suite
 
 status:  ## Show cluster status
 	@echo "=== Containers ==="
-	@docker compose ps
+	@podman compose ps
 	@echo ""
 	@echo "=== Cluster ==="
-	@docker exec slurmctld sinfo 2>/dev/null || echo "Not ready"
+	@podman exec slurmctld sinfo 2>/dev/null || echo "Not ready"
 
 shell:  ## Open shell in slurmctld
-	docker exec -it slurmctld bash
+	podman exec -it slurmctld bash
 
 logs-slurmctld:  ## Show slurmctld logs
-	docker compose logs -f slurmctld
+	podman compose logs -f slurmctld
 
 logs-slurmdbd:  ## Show slurmdbd logs
-	docker compose logs -f slurmdbd
+	podman compose logs -f slurmdbd
 
 quick-test:  ## Submit a quick test job
-	docker exec slurmctld bash -c "cd /data && sbatch --wrap='hostname' && sleep 3 && squeue && cat slurm-*.out 2>/dev/null | tail -5"
+	podman exec slurmctld bash -c "cd /data && sbatch --wrap='hostname' && sleep 3 && squeue && cat slurm-*.out 2>/dev/null | tail -5"
 
 run-examples:  ## Run example jobs
 	./run_examples.sh
 
 jobs:  ## View job queue
-	docker exec slurmctld squeue
+	podman exec slurmctld squeue
 
 update-slurm:  ## Update Slurm config files (usage: make update-slurm FILES="slurm.conf slurmdbd.conf")
 	@if [ -z "$(FILES)" ]; then \
@@ -157,7 +157,7 @@ update-slurm:  ## Update Slurm config files (usage: make update-slurm FILES="slu
 
 reload-slurm:  ## Reload Slurm config without restart (after live editing)
 	@echo "Reloading Slurm configuration..."
-	docker exec slurmctld scontrol reconfigure
+	podman exec slurmctld scontrol reconfigure
 	@echo "✓ Configuration reloaded"
 
 scale-cpu-workers:  ## Scale CPU workers (usage: make scale-cpu-workers N=3)
@@ -165,42 +165,42 @@ scale-cpu-workers:  ## Scale CPU workers (usage: make scale-cpu-workers N=3)
 		echo "Error: N parameter required. Usage: make scale-cpu-workers N=3"; \
 		exit 1; \
 	fi
-	docker compose $(PROFILE_FLAG) up -d --scale cpu-worker=$(N) --no-recreate
+	podman compose $(PROFILE_FLAG) up -d --scale cpu-worker=$(N) --no-recreate
 	@echo "Waiting for dynamic workers to register..."; \
 	sleep 10; \
-	LIVE_NODES=$$(docker compose $(PROFILE_FLAG) ps cpu-worker -q 2>/dev/null \
+	LIVE_NODES=$$(podman compose $(PROFILE_FLAG) ps cpu-worker -q 2>/dev/null \
 		| while read cid; do \
-			docker exec "$$cid" hostname 2>/dev/null; \
+			podman exec "$$cid" hostname 2>/dev/null; \
 		done | sort); \
-	SLURM_NODES=$$(docker exec slurmctld scontrol show nodes 2>/dev/null \
+	SLURM_NODES=$$(podman exec slurmctld scontrol show nodes 2>/dev/null \
 		| grep -o 'NodeName=c[0-9]*' | cut -d= -f2 | sort); \
 	STALE_NODES=$$(comm -23 <(echo "$$SLURM_NODES") <(echo "$$LIVE_NODES") | paste -sd, -); \
 	if [ -n "$$STALE_NODES" ]; then \
 		echo "Removing stale dynamic nodes: $$STALE_NODES"; \
-		docker exec slurmctld scontrol delete nodename=$$STALE_NODES; \
+		podman exec slurmctld scontrol delete nodename=$$STALE_NODES; \
 	fi; \
-	docker exec slurmctld sinfo
+	podman exec slurmctld sinfo
 
 scale-gpu-workers:  ## Scale GPU workers (usage: make scale-gpu-workers N=2)
 	@if [ -z "$(N)" ]; then \
 		echo "Error: N parameter required. Usage: make scale-gpu-workers N=2"; \
 		exit 1; \
 	fi
-	docker compose --profile gpu $(PROFILE_FLAG) up -d --scale gpu-worker=$(N) --no-recreate
+	podman compose --profile gpu $(PROFILE_FLAG) up -d --scale gpu-worker=$(N) --no-recreate
 	@echo "Waiting for dynamic GPU workers to register..."; \
 	sleep 10; \
-	LIVE_NODES=$$(docker compose --profile gpu $(PROFILE_FLAG) ps gpu-worker -q 2>/dev/null \
+	LIVE_NODES=$$(podman compose --profile gpu $(PROFILE_FLAG) ps gpu-worker -q 2>/dev/null \
 		| while read cid; do \
-			docker exec "$$cid" hostname 2>/dev/null; \
+			podman exec "$$cid" hostname 2>/dev/null; \
 		done | sort); \
-	SLURM_NODES=$$(docker exec slurmctld scontrol show nodes 2>/dev/null \
+	SLURM_NODES=$$(podman exec slurmctld scontrol show nodes 2>/dev/null \
 		| grep -o 'NodeName=g[0-9]*' | cut -d= -f2 | sort); \
 	STALE_NODES=$$(comm -23 <(echo "$$SLURM_NODES") <(echo "$$LIVE_NODES") | paste -sd, -); \
 	if [ -n "$$STALE_NODES" ]; then \
 		echo "Removing stale GPU nodes: $$STALE_NODES"; \
-		docker exec slurmctld scontrol delete nodename=$$STALE_NODES; \
+		podman slurmctld scontrol delete nodename=$$STALE_NODES; \
 	fi; \
-	docker exec slurmctld sinfo
+	podman exec slurmctld sinfo
 
 # Multi-Version Support Targets
 
@@ -229,14 +229,14 @@ build-all:  ## Build Docker images for all supported versions
 		echo "Building Slurm $$version"; \
 		echo "========================================"; \
 		echo "SLURM_VERSION=$$version" > .env; \
-		docker compose build || exit 1; \
+		podman compose build || exit 1; \
 		echo "✓ Built slurm-docker-cluster:$$version"; \
 	done
 	@echo ""
 	@echo "========================================"; \
 	echo "✓ All versions built successfully"; \
 	echo "========================================"; \
-	docker images | grep slurm-docker-cluster
+	podman images | grep slurm-docker-cluster
 
 test-version:  ## Test a specific version (usage: make test-version VER=25.11.7)
 	@if [ -z "$(VER)" ]; then \
@@ -250,7 +250,7 @@ test-version:  ## Test a specific version (usage: make test-version VER=25.11.7)
 	echo "SLURM_VERSION=$(VER)" > .env
 	@$(MAKE) clean
 	@echo "Starting cluster with Slurm $(VER)..."
-	@docker compose up -d
+	@podman compose up -d
 	@echo "Waiting for services to start and auto-register..."
 	@sleep 20
 	@echo "Running test suite..."

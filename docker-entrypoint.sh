@@ -25,7 +25,7 @@ detect_replica_number() {
 
     # Fallback: use container ID
     hostname
-    return 1
+    return 0
 }
 
 echo "---> Starting the MUNGE Authentication service (munged) ..."

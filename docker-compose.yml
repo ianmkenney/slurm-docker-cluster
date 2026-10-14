@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mariadb:12
+    image: docker.io/mariadb:12
     hostname: mysql
     container_name: mysql
     environment:
